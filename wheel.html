@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lucky Spin</title>
+<style>
+  :root{
+    --ink:#1b1430;
+    --panel:#241a3d;
+    --gold:#f2b632;
+    --gold-dim:#c9922a;
+    --coral:#ef6461;
+    --teal:#2fb7a5;
+    --cream:#f7ecd8;
+    --line: rgba(247,236,216,0.14);
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; min-height:100%;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #3a2a5c 0%, var(--ink) 55%),
+      var(--ink);
+    color:var(--cream);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .stage{
+    position:relative;
+    display:flex; flex-direction:column; align-items:center;
+    gap:20px;
+    padding:32px;
+    width:100%;
+  }
+  .marquee{
+    font-family: 'Futura', 'Trebuchet MS', sans-serif;
+    letter-spacing:0.35em;
+    text-transform:uppercase;
+    font-size:13px;
+    color:var(--gold);
+    opacity:0.85;
+  }
+  h1{
+    margin:0 0 4px;
+    font-size:clamp(28px,4vw,44px);
+    font-weight:400;
+    letter-spacing:0.02em;
+    text-align:center;
+  }
+  h1 em{ font-style:normal; color:var(--gold); }
+  .wheel-wrap{
+    position:relative;
+    width:min(78vw, 420px);
+    height:min(78vw, 420px);
+    filter: drop-shadow(0 25px 40px rgba(0,0,0,0.45));
+  }
+  .bulbs{ position:absolute; inset:-14px; border-radius:50%; pointer-events:none; }
+  .bulb{
+    position:absolute; width:8px; height:8px; border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 0 6px 2px rgba(242,182,50,0.6);
+    top:50%; left:50%; transform-origin:0 0;
+    animation: twinkle 1.6s infinite ease-in-out;
+  }
+  @keyframes twinkle{ 0%,100%{ opacity:1; } 50%{ opacity:0.25; } }
+  .pointer{
+    position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:14px solid transparent; border-right:14px solid transparent;
+    border-top:24px solid var(--gold);
+    z-index:5;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.4));
+  }
+  canvas#wheel{
+    width:100%; height:100%; border-radius:50%;
+    border:6px solid var(--gold-dim);
+    background:var(--panel);
+    transition: transform 5.2s cubic-bezier(0.12, 0.72, 0.15, 1);
+  }
+  .hub{
+    position:absolute; top:50%; left:50%;
+    width:19%; height:19%; transform:translate(-50%,-50%);
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff6df, var(--gold) 55%, var(--gold-dim) 100%);
+    border:3px solid var(--ink);
+    z-index:4;
+  }
+  .magnifier{
+    position:absolute; top:50%; left:50%;
+    width:230px; height:230px; border-radius:50%;
+    border:5px solid var(--gold);
+    box-shadow:0 0 0 6px rgba(27,20,48,0.85), 0 20px 40px rgba(0,0,0,0.6), 0 0 40px rgba(242,182,50,0.5);
+    overflow:hidden; z-index:20;
+    transform:translate(-50%,-50%) scale(0); opacity:0;
+    pointer-events:none;
+    transition: transform .55s cubic-bezier(0.2,0.9,0.25,1.2), opacity .3s ease;
+    background:var(--panel);
+  }
+  .magnifier.show{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+  .magnifier canvas{ position:absolute; top:0; left:0; }
+  .magnifier .crosshair{
+    position:absolute; inset:0;
+    background:
+      linear-gradient(rgba(242,182,50,0.5) 1px, transparent 1px) center / 100% 50%,
+      linear-gradient(90deg, rgba(242,182,50,0.5) 1px, transparent 1px) center / 50% 100%;
+    background-repeat:no-repeat; background-position:center;
+    pointer-events:none;
+  }
+  .magnifier-label{
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%, 130px) scale(0.6); opacity:0;
+    z-index:21;
+    font-family:'Futura','Trebuchet MS',sans-serif;
+    letter-spacing:0.1em; text-transform:uppercase; font-size:12px;
+    color:var(--gold); background:var(--ink); border:1px solid var(--gold);
+    padding:6px 14px; border-radius:999px; white-space:nowrap;
+    transition: opacity .3s ease .3s, transform .3s ease .3s;
+  }
+  .magnifier-label.show{ opacity:1; transform:translate(-50%, 130px) scale(1); }
+
+  button#spinBtn{
+    font-family:'Futura','Trebuchet MS',sans-serif;
+    letter-spacing:0.12em; text-transform:uppercase; font-size:15px;
+    padding:14px 40px; border-radius:999px; border:none; cursor:pointer;
+    background:linear-gradient(180deg, var(--coral), #d94d4a);
+    color:var(--cream);
+    box-shadow:0 8px 0 #a83836, 0 14px 20px rgba(0,0,0,0.35);
+    transition: transform .08s ease;
+  }
+  button#spinBtn:active{ transform:translateY(6px); box-shadow:0 2px 0 #a83836; }
+  button#spinBtn:disabled{ opacity:0.5; cursor:default; }
+
+  .result{ min-height:24px; font-size:18px; color:var(--gold); text-align:center; }
+
+  .receipt{
+    display:none;
+    width:min(92vw, 340px);
+    padding:8px 4px 0;
+    font-family: 'Courier New', monospace;
+    opacity:0.75;
+  }
+  .receipt.show{ display:block; }
+  .receipt-line{
+    font-size:9.5px;
+    line-height:1.6;
+    color:rgba(247,236,216,0.65);
+    word-break:break-all;
+    white-space:normal;
+  }
+  .receipt-line .k{
+    color:rgba(247,236,216,0.4);
+    font-family:'Futura','Trebuchet MS',sans-serif;
+    letter-spacing:0.03em;
+  }
+  .receipt .caveat{
+    margin-top:6px;
+    font-size:9px;
+    line-height:1.5;
+    color:rgba(247,236,216,0.5);
+    font-style:italic;
+    font-family:'Futura','Trebuchet MS',sans-serif;
+  }
+
+  .lock-msg{
+    font-size:13px;
+    color:rgba(247,236,216,0.55);
+    text-align:center;
+    max-width:320px;
+  }
+
+  .consent-overlay{
+    position:fixed; inset:0;
+    background:rgba(10,7,20,0.88);
+    backdrop-filter: blur(3px);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .consent-overlay.hidden{ display:none; }
+  .consent-box{
+    width:min(90vw, 380px);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:26px 24px;
+    text-align:center;
+  }
+  .consent-box h2{
+    margin:0 0 12px;
+    font-size:18px;
+    font-weight:400;
+    color:var(--gold);
+  }
+  .consent-box p{
+    font-size:13px;
+    line-height:1.6;
+    color:rgba(247,236,216,0.8);
+    margin:0 0 20px;
+  }
+  .consent-box button{
+    font-family:'Futura','Trebuchet MS',sans-serif;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    font-size:13px;
+    padding:11px 32px;
+    border-radius:999px;
+    border:none;
+    cursor:pointer;
+    background:linear-gradient(180deg, var(--coral), #d94d4a);
+    color:var(--cream);
+  }
+  body.consent-pending{ overflow:hidden; }
+  body.consent-pending .stage{ filter:blur(4px); pointer-events:none; }
+</style>
+</head>
+<body class="consent-pending">
+
+<div class="consent-overlay" id="consentOverlay">
+  <div class="consent-box">
+    <h2>Before you spin</h2>
+    <p>This wheel is for entertainment purposes. The owners of the wheel are not responsible for any gambling addition that might be caused (yes I am talking to you..).
+      Upon winning please send a full screenshot over to the owner, so they can verify.</p>
+    <button id="consentBtn">I Agree</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="marquee">✦ Duncan's Totally Legit Point Bank ✦</div>
+  <h1>Wheel of <em>Fortune</em></h1>
+
+  <div class="wheel-wrap" id="wheelWrap">
+    <div class="bulbs" id="bulbs"></div>
+    <div class="pointer"></div>
+    <canvas id="wheel" width="600" height="600"></canvas>
+    <div class="hub"></div>
+    <div class="magnifier" id="magnifier">
+      <canvas id="magCanvas" width="230" height="230"></canvas>
+      <div class="crosshair"></div>
+    </div>
+    <div class="magnifier-label" id="magLabel"></div>
+  </div>
+
+  <button id="spinBtn">Spin the Wheel</button>
+  <div class="result" id="result"></div>
+  <div class="lock-msg" id="lockMsg"></div>
+
+  <div class="receipt" id="receipt">
+    <div class="caveat">
+      <div class="receipt-line"><span class="k">Prize:</span> <span id="rcPrize">—</span></div>
+      <div class="receipt-line"><span class="k">Timestamp:</span> <span id="rcTime">—</span></div>
+      <div class="receipt-line"><span class="k">Reference code:</span> <span id="rcHash">—</span></div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+
+  const _0x4d8471=_0xc2df;(function(_0x2cc53b,_0x1a88c9){const _0x8794c6=_0xc2df,_0x43d7bc=_0x2cc53b();while(!![]){try{const _0x31ce60=-parseInt(_0x8794c6(0x1e4))/0x1+parseInt(_0x8794c6(0x1c5))/0x2*(-parseInt(_0x8794c6(0x207))/0x3)+-parseInt(_0x8794c6(0x19f))/0x4*(-parseInt(_0x8794c6(0x203))/0x5)+-parseInt(_0x8794c6(0x1f6))/0x6*(parseInt(_0x8794c6(0x20d))/0x7)+-parseInt(_0x8794c6(0x1b8))/0x8*(parseInt(_0x8794c6(0x1d1))/0x9)+-parseInt(_0x8794c6(0x1e9))/0xa*(parseInt(_0x8794c6(0x20f))/0xb)+parseInt(_0x8794c6(0x1e8))/0xc;if(_0x31ce60===_0x1a88c9)break;else _0x43d7bc['push'](_0x43d7bc['shift']());}catch(_0x349e2e){_0x43d7bc['push'](_0x43d7bc['shift']());}}}(_0x3a2b,0x3a5fe));let segments=[{'id':_0x4d8471(0x1dd),'label':_0x4d8471(0x1bd),'weight':0x20,'size':0x1},{'id':_0x4d8471(0x1b5),'label':_0x4d8471(0x1d8),'weight':0x1c,'size':0x1},{'id':_0x4d8471(0x1b7),'label':_0x4d8471(0x19b),'weight':0x12,'size':0x1},{'id':_0x4d8471(0x1e7),'label':_0x4d8471(0x211),'weight':0xc,'size':0x1},{'id':_0x4d8471(0x1d9),'label':_0x4d8471(0x206),'weight':0x7,'size':0x1},{'id':_0x4d8471(0x1e2),'label':_0x4d8471(0x1b0),'weight':0x2,'size':0x1},{'id':_0x4d8471(0x1bb),'label':_0x4d8471(0x1ef),'weight':0.2,'size':0.04}],nextIdNum=0x9;const sliceColors=[_0x4d8471(0x1f1),_0x4d8471(0x1da),'#2fb7a5',_0x4d8471(0x1be),_0x4d8471(0x1d5),_0x4d8471(0x1c2),_0x4d8471(0x1ac),_0x4d8471(0x1db),_0x4d8471(0x1fd),'#5aa8e0'],canvas=document[_0x4d8471(0x1d0)](_0x4d8471(0x1b9)),ctx=canvas[_0x4d8471(0x1d6)]('2d'),size=canvas[_0x4d8471(0x1aa)],cx=size/0x2,cy=size/0x2,r=size/0x2-0x6;let currentRotation=0x0,sessionSpinCount=0x0,enforceDailyLock=!![];function computeSliceAngles(){const _0x35f12b=_0x4d8471,_0x1d9384=segments[_0x35f12b(0x1fb)]((_0x54eb45,_0x271342)=>_0x54eb45+(_0x271342[_0x35f12b(0x1a8)]??0x1),0x0);let _0x56f3f6=0x0;return segments[_0x35f12b(0x1dc)](_0xc6e3d5=>{const _0x5737f7=0x168*((_0xc6e3d5['size']??0x1)/_0x1d9384),_0x2d4e12=_0x56f3f6,_0x2d7f42=_0x56f3f6+_0x5737f7;return _0x56f3f6=_0x2d7f42,{'start':_0x2d4e12,'end':_0x2d7f42,'mid':_0x2d4e12+_0x5737f7/0x2,'angle':_0x5737f7};});}function drawWheel(){const _0x20d61d=_0x4d8471,_0x526a8b=segments['length'],_0x2a5b7c=computeSliceAngles();ctx[_0x20d61d(0x20c)](0x0,0x0,size,size);for(let _0x52466d=0x0;_0x52466d<_0x526a8b;_0x52466d++){const _0x5b4fbf=_0x2a5b7c[_0x52466d]['start']*Math['PI']/0xb4-Math['PI']/0x2,_0x455eb5=_0x2a5b7c[_0x52466d]['end']*Math['PI']/0xb4-Math['PI']/0x2;ctx[_0x20d61d(0x1ae)](),ctx[_0x20d61d(0x202)](cx,cy),ctx[_0x20d61d(0x1cb)](cx,cy,r,_0x5b4fbf,_0x455eb5),ctx[_0x20d61d(0x1f7)](),ctx[_0x20d61d(0x1c9)]=sliceColors[_0x52466d%sliceColors[_0x20d61d(0x1a4)]],ctx[_0x20d61d(0x1f0)](),ctx[_0x20d61d(0x1c7)]=_0x20d61d(0x1af),ctx[_0x20d61d(0x1fc)]=0x2,ctx[_0x20d61d(0x1df)]();if(_0x2a5b7c[_0x52466d][_0x20d61d(0x1ed)]>0x8){ctx['save'](),ctx[_0x20d61d(0x1f8)](cx,cy),ctx[_0x20d61d(0x1d3)](_0x2a5b7c[_0x52466d][_0x20d61d(0x1ba)]*Math['PI']/0xb4-Math['PI']/0x2),ctx[_0x20d61d(0x204)]='right',ctx['fillStyle']=_0x20d61d(0x1af);const _0x207964=r-0x26;let _0x1e11df=Math['max'](0xb,Math[_0x20d61d(0x1ff)](0x14,_0x2a5b7c[_0x52466d]['angle']*0.9));ctx[_0x20d61d(0x1b1)]=_0x20d61d(0x1bc)+_0x1e11df+_0x20d61d(0x19e);let _0x787ec7=segments[_0x52466d][_0x20d61d(0x20b)];while(ctx['measureText'](_0x787ec7)[_0x20d61d(0x1aa)]>_0x207964&&_0x1e11df>0x8){_0x1e11df-=0x1,ctx[_0x20d61d(0x1b1)]=_0x20d61d(0x1bc)+_0x1e11df+'px\x20\x27Futura\x27,\x20\x27Trebuchet\x20MS\x27,\x20sans-serif';}if(ctx[_0x20d61d(0x1d7)](_0x787ec7)[_0x20d61d(0x1aa)]>_0x207964){while(_0x787ec7[_0x20d61d(0x1a4)]>0x1&&ctx[_0x20d61d(0x1d7)](_0x787ec7+'…')[_0x20d61d(0x1aa)]>_0x207964){_0x787ec7=_0x787ec7[_0x20d61d(0x1b3)](0x0,-0x1);}_0x787ec7+='…';}ctx[_0x20d61d(0x210)](_0x787ec7,r-0x12,0x6),ctx[_0x20d61d(0x1d4)]();}}}function pickWeightedIndex(){const _0x53b461=_0x4d8471,_0x1bb18=segments[_0x53b461(0x1fb)]((_0x5c9454,_0x194c3e)=>_0x5c9454+_0x194c3e[_0x53b461(0x213)],0x0);let _0x395177=Math['random']()*_0x1bb18;for(let _0x1744e7=0x0;_0x1744e7<segments['length'];_0x1744e7++){_0x395177-=segments[_0x1744e7][_0x53b461(0x213)];if(_0x395177<=0x0)return _0x1744e7;}return segments[_0x53b461(0x1a4)]-0x1;}function _0xc2df(_0x4a3fb8,_0x131ff5){_0x4a3fb8=_0x4a3fb8-0x199;const _0x3a2bd5=_0x3a2b();let _0xc2df1c=_0x3a2bd5[_0x4a3fb8];return _0xc2df1c;}async function computeReferenceHash(_0x3da0d4,_0x3c81e6,_0x1fa3ad){const _0x3cc3ea=_0x4d8471;try{const _0x19944e=new TextEncoder()['encode'](_0x3da0d4+'|'+_0x3c81e6+'|'+_0x1fa3ad),_0x531f3a=await crypto[_0x3cc3ea(0x1d2)][_0x3cc3ea(0x1c3)]('SHA-256',_0x19944e);return Array['from'](new Uint8Array(_0x531f3a))['map'](_0x16c40e=>_0x16c40e['toString'](0x10)['padStart'](0x2,'0'))[_0x3cc3ea(0x1f4)]('');}catch(_0x2f42ba){return console[_0x3cc3ea(0x1ee)](_0x3cc3ea(0x200),_0x2f42ba),_0x3cc3ea(0x1eb);}}function _0x3a2b(){const _0x4ccf94=['textAlign','🎉\x20You\x20won:\x20','Extra\x202\x20spins','18621JhkgGw','get','bulbs','consentOverlay','label','clearRect','21sLxPZv','rotate(','638GCAhPY','fillText','3\x20Bonus\x20points','rcHash','weight','Could\x20not\x20save\x20spin\x20lock','textContent','Double\x20interest\x20for\x20next\x20month','top','div','px\x20\x27Futura\x27,\x20\x27Trebuchet\x20MS\x27,\x20sans-serif','352PANMUx','save','date','add','lockMsg','length','storage','hidden','click','size','height','width','magLabel','#d94d8a','parse','beginPath','#1b1430','I\x20buy\x20you\x20lunch','font','rcPrize','slice','show','SEG-2','classList','SEG-3','652112MmMpXp','wheel','mid','SEG-8','bold\x20','1\x20Bonus\x20point','#8a6fd1','rcTime','addEventListener','createElement','#4f8fdb','digest','sin','26oWKiLy','🎉\x20Today\x27s\x20result:\x20','strokeStyle','set','fillStyle','result','arc','disabled','animationDelay','appendChild','consent-pending','getElementById','36zPZAEA','subtle','rotate','restore','#e88a3a','getContext','measureText','Nothing\x20you\x20suck','SEG-5','#f2b632','#6fb04a','map','SEG-1','spinBtn','stroke','innerHTML','receipt','SEG-6','cos','360785TzVeew','drawImage','consentBtn','SEG-4','13150464pDJrGS','6220UoAanb','clip','unavailable','rcId','angle','error','GRAND\x20PRIZE\x20Contact\x20Duncan','fill','#ef6461','stringify','magCanvas','join','transform','934932BTUutu','closePath','translate','calc(50%\x20+\x20','style','reduce','lineWidth','#c9922a','value','min','Hash\x20generation\x20failed','remove','moveTo','23540zHgLUA'];_0x3a2b=function(){return _0x4ccf94;};return _0x3a2b();}const spinBtn=document['getElementById'](_0x4d8471(0x1de)),resultEl=document['getElementById'](_0x4d8471(0x1ca)),lockMsgEl=document[_0x4d8471(0x1d0)](_0x4d8471(0x1a3)),receiptEl=document['getElementById'](_0x4d8471(0x1e1)),rcPrize=document[_0x4d8471(0x1d0)](_0x4d8471(0x1b2)),rcId=document[_0x4d8471(0x1d0)](_0x4d8471(0x1ec)),rcTime=document[_0x4d8471(0x1d0)](_0x4d8471(0x1bf)),rcHash=document[_0x4d8471(0x1d0)](_0x4d8471(0x212)),magnifier=document[_0x4d8471(0x1d0)]('magnifier'),magCanvas=document['getElementById'](_0x4d8471(0x1f3)),magCtx=magCanvas[_0x4d8471(0x1d6)]('2d'),magLabel=document[_0x4d8471(0x1d0)](_0x4d8471(0x1ab));function showMagnifier(_0x1cbf77){const _0x4a1d40=_0x4d8471,_0x557b7e=0x82,_0x3fbe69=cx-_0x557b7e/0x2,_0x5ba3f9=cy-r-0x6;magCtx[_0x4a1d40(0x20c)](0x0,0x0,magCanvas['width'],magCanvas[_0x4a1d40(0x1a9)]),magCtx[_0x4a1d40(0x1a0)](),magCtx[_0x4a1d40(0x1ae)](),magCtx[_0x4a1d40(0x1cb)](magCanvas[_0x4a1d40(0x1aa)]/0x2,magCanvas[_0x4a1d40(0x1a9)]/0x2,magCanvas[_0x4a1d40(0x1aa)]/0x2,0x0,Math['PI']*0x2),magCtx[_0x4a1d40(0x1ea)](),magCtx[_0x4a1d40(0x1e5)](canvas,_0x3fbe69,_0x5ba3f9,_0x557b7e,_0x557b7e*1.4,0x0,0x0,magCanvas[_0x4a1d40(0x1aa)],magCanvas[_0x4a1d40(0x1a9)]*1.4),magCtx[_0x4a1d40(0x1d4)](),magLabel[_0x4a1d40(0x19a)]=_0x1cbf77,magnifier[_0x4a1d40(0x1b6)][_0x4a1d40(0x1a2)]('show'),magLabel[_0x4a1d40(0x1b6)][_0x4a1d40(0x1a2)]('show'),setTimeout(()=>{const _0x3fe5b2=_0x4a1d40;magnifier[_0x3fe5b2(0x1b6)][_0x3fe5b2(0x201)](_0x3fe5b2(0x1b4)),magLabel[_0x3fe5b2(0x1b6)][_0x3fe5b2(0x201)](_0x3fe5b2(0x1b4));},0xc80);}function todayStr(){const _0xd8a2ac=_0x4d8471;return new Date()['toISOString']()[_0xd8a2ac(0x1b3)](0x0,0xa);}function renderReceipt({label:_0xf14d67,id:_0x34f4f4,spinNum:_0x527819,timestamp:_0x577ba1,hash:_0x2241c6}){const _0x52e916=_0x4d8471;rcPrize[_0x52e916(0x19a)]=_0xf14d67,rcTime[_0x52e916(0x19a)]=_0x577ba1,rcHash[_0x52e916(0x19a)]=_0x2241c6,receiptEl[_0x52e916(0x1b6)][_0x52e916(0x1a2)](_0x52e916(0x1b4));}function lockUI(_0x10ddc3){const _0x2c3d94=_0x4d8471;spinBtn[_0x2c3d94(0x1cc)]=!![],lockMsgEl[_0x2c3d94(0x19a)]='You\x27ve\x20already\x20spun\x20today\x20—\x20come\x20back\x20tomorrow.',_0x10ddc3&&(resultEl[_0x2c3d94(0x19a)]=_0x2c3d94(0x1c6)+_0x10ddc3[_0x2c3d94(0x20b)],renderReceipt(_0x10ddc3));}async function checkExistingLock(){const _0x5324ee=_0x4d8471;if(!enforceDailyLock)return;try{const _0x9f5159=await window['storage'][_0x5324ee(0x208)]('wheel:lastSpin',![]);if(_0x9f5159&&_0x9f5159[_0x5324ee(0x1fe)]){const _0x47fc7f=JSON[_0x5324ee(0x1ad)](_0x9f5159[_0x5324ee(0x1fe)]);_0x47fc7f[_0x5324ee(0x1a1)]===todayStr()&&lockUI(_0x47fc7f);}}catch(_0x13bb4e){}}async function saveLock(_0x90236c){const _0x37cbd7=_0x4d8471;try{await window[_0x37cbd7(0x1a5)][_0x37cbd7(0x1c8)]('wheel:lastSpin',JSON[_0x37cbd7(0x1f2)](_0x90236c),![]);}catch(_0x5dfecb){console['error'](_0x37cbd7(0x199),_0x5dfecb);}}spinBtn[_0x4d8471(0x1c0)](_0x4d8471(0x1a7),async()=>{const _0x47a05c=_0x4d8471;spinBtn[_0x47a05c(0x1cc)]=!![],resultEl[_0x47a05c(0x19a)]='',lockMsgEl['textContent']='',receiptEl[_0x47a05c(0x1b6)][_0x47a05c(0x201)](_0x47a05c(0x1b4)),magnifier[_0x47a05c(0x1b6)][_0x47a05c(0x201)]('show'),magLabel['classList'][_0x47a05c(0x201)](_0x47a05c(0x1b4));const _0x187d4d=computeSliceAngles(),_0x5d7fe8=pickWeightedIndex(),_0x86237c=_0x187d4d[_0x5d7fe8]['mid'],_0x490dfd=0x6,_0xbe061a=(0x168-_0x86237c)%0x168,_0x59cef0=(currentRotation%0x168+0x168)%0x168;let _0x783dc4=(_0xbe061a-_0x59cef0+0x168)%0x168;const _0x1b210b=currentRotation+_0x783dc4+_0x490dfd*0x168;currentRotation=_0x1b210b,canvas['style'][_0x47a05c(0x1f5)]=_0x47a05c(0x20e)+_0x1b210b+'deg)',sessionSpinCount+=0x1;const _0x19d8c1=sessionSpinCount;setTimeout(async()=>{const _0x40fd6a=_0x47a05c,_0x38eeeb=segments[_0x5d7fe8],_0x3658cc=new Date()['toISOString'](),_0x45a9f6=await computeReferenceHash(_0x38eeeb['id'],_0x3658cc,_0x19d8c1);resultEl[_0x40fd6a(0x19a)]=_0x40fd6a(0x205)+_0x38eeeb[_0x40fd6a(0x20b)];const _0x3a495c={'date':todayStr(),'label':_0x38eeeb['label'],'id':_0x38eeeb['id'],'spinNum':_0x19d8c1,'timestamp':_0x3658cc,'hash':_0x45a9f6};renderReceipt(_0x3a495c),await saveLock(_0x3a495c);const _0x27fc06=_0x187d4d[_0x5d7fe8][_0x40fd6a(0x1ed)];_0x27fc06<=0xa&&showMagnifier(_0x38eeeb[_0x40fd6a(0x20b)]),lockMsgEl[_0x40fd6a(0x19a)]=enforceDailyLock?'You\x27ve\x20used\x20today\x27s\x20spin\x20—\x20come\x20back\x20tomorrow.':'',!enforceDailyLock&&(spinBtn[_0x40fd6a(0x1cc)]=![]);},0x14b4);});function buildBulbs(){const _0x489a99=_0x4d8471,_0x301ade=document[_0x489a99(0x1d0)](_0x489a99(0x209)),_0x2c82e7=0x18,_0x5c2ec5=0x32;_0x301ade[_0x489a99(0x1e0)]='';for(let _0x1c9480=0x0;_0x1c9480<_0x2c82e7;_0x1c9480++){const _0x549578=_0x1c9480/_0x2c82e7*Math['PI']*0x2,_0x170ab9=document[_0x489a99(0x1c1)](_0x489a99(0x19d));_0x170ab9['className']='bulb',_0x170ab9['style']['left']='calc(50%\x20+\x20'+Math[_0x489a99(0x1e3)](_0x549578)*_0x5c2ec5+'%)',_0x170ab9[_0x489a99(0x1fa)][_0x489a99(0x19c)]=_0x489a99(0x1f9)+Math[_0x489a99(0x1c4)](_0x549578)*_0x5c2ec5+'%)',_0x170ab9[_0x489a99(0x1fa)][_0x489a99(0x1cd)]=_0x1c9480%0x6*0.25+'s',_0x301ade[_0x489a99(0x1ce)](_0x170ab9);}}document[_0x4d8471(0x1d0)](_0x4d8471(0x1e6))['addEventListener'](_0x4d8471(0x1a7),()=>{const _0x4dd64e=_0x4d8471;document[_0x4dd64e(0x1d0)](_0x4dd64e(0x20a))[_0x4dd64e(0x1b6)][_0x4dd64e(0x1a2)](_0x4dd64e(0x1a6)),document['body'][_0x4dd64e(0x1b6)]['remove'](_0x4dd64e(0x1cf));}),drawWheel(),buildBulbs(),checkExistingLock();
+</script>
+
+</body>
+</html>
